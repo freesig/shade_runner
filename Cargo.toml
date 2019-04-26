@@ -8,12 +8,9 @@ edition = "2018"
 notify = "4"
 shaderc = "0.3"
 spirv-reflect = "0.2"
-vulkano = "0.11"
+vulkano = { git = "https://github.com/mitchmindtree/vulkano", branch = "nannou_patches" }
 
 [dev-dependencies]
-vulkano = "0.11"
+vulkano = { git = "https://github.com/mitchmindtree/vulkano", branch = "nannou_patches" }
 color-backtrace = "0.1" 
 difference = "2"
-
-[patch.crates-io]
-vulkano = { git = "https://github.com/mitchmindtree/vulkano", branch = "nannou_patches" }

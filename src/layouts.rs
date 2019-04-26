@@ -1,5 +1,6 @@
 use crate::vk;
 use vk::pipeline::shader::*;
+pub use vk::pipeline::shader::ShaderInterfaceDef;
 use vk::descriptor::descriptor::*;
 use vk::descriptor::pipeline_layout::*;
 use crate::reflection::LayoutData;
