@@ -57,8 +57,16 @@ unsafe impl PipelineLayoutDesc for FragLayout {
     fn num_bindings_in_set(&self, set: usize) -> Option<usize> {
         self.layout_data.num_bindings.get(&set).map(|&i| i)
     }
-    fn descriptor(&self, _set: usize, _binding: usize) -> Option<DescriptorDesc> {
-        None
+    fn descriptor(&self, set: usize, binding: usize) -> Option<DescriptorDesc> {
+        self.layout_data.descriptions.get(&set)
+            .and_then(|s|s.get(&binding))
+            .map(|desc| {
+                let mut desc = desc.clone();
+                dbg!(&self.stages);
+                desc.stages = self.stages.clone();
+                desc
+            })
+        
     }
     fn num_push_constants_ranges(&self) -> usize {
         0
