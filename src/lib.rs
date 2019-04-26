@@ -2,21 +2,24 @@ mod compiler;
 mod error;
 mod reflection;
 mod srvk;
-mod layouts;
+pub mod layouts;
+mod watch;
 
 pub use layouts::*;
 pub use reflection::LayoutData;
+pub use watch::{Message, Watch};
+pub use error::Error;
 
 use spirv_reflect as sr;
 use vulkano as vk;
 use std::path::Path;
-use error::Error;
 use shaderc::ShaderKind;
 
 pub struct CompiledShaders {
     pub vertex: Vec<u32>,
     pub fragment: Vec<u32>,
 }
+
 
 pub fn load<T>(vertex: T, fragment: T) -> Result<CompiledShaders, Error>
 where
