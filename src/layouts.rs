@@ -62,17 +62,22 @@ unsafe impl PipelineLayoutDesc for FragLayout {
             .and_then(|s|s.get(&binding))
             .map(|desc| {
                 let mut desc = desc.clone();
-                dbg!(&self.stages);
                 desc.stages = self.stages.clone();
                 desc
             })
         
     }
     fn num_push_constants_ranges(&self) -> usize {
-        0
+        self.layout_data.num_constants
     }
-    fn push_constants_range(&self, _num: usize) -> Option<PipelineLayoutDescPcRange> {
-        None
+    fn push_constants_range(&self, num: usize) -> Option<PipelineLayoutDescPcRange> {
+        self.layout_data.pc_ranges.get(num)
+            .map(|desc| {
+                let mut desc = desc.clone();
+                desc.stages = self.stages.clone();
+                desc
+            })
+
     }
 }
 

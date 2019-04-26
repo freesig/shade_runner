@@ -5,9 +5,9 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use vulkano::descriptor::descriptor::*;
+use vulkano::descriptor::pipeline_layout::{PipelineLayoutDesc, PipelineLayoutDescPcRange};
 use vulkano::format::*;
 use vulkano::pipeline::shader::ShaderInterfaceDefEntry;
-use vulkano::descriptor::pipeline_layout::PipelineLayoutDesc;
 
 fn setup() {
     color_backtrace::install();
@@ -32,9 +32,9 @@ fn difference(e: &str, t: &str) -> String {
         .join("\n")
 }
 
-fn descriptor_layout<T>(desc: &T) -> String 
+fn descriptor_layout<T>(desc: &T) -> String
 where
-T: PipelineLayoutDesc,
+    T: PipelineLayoutDesc,
 {
     let num_sets = desc.num_sets();
     let mut r = format!("{:?}", num_sets);
@@ -68,6 +68,15 @@ where
     shade_runner::parse(&shader)
 }
 
+fn do_test<T>(a: &T, b: &T)
+where
+    T: std::fmt::Debug,
+{
+    let a = format!("{:?}", a);
+    let b = format!("{:?}", b);
+    assert_eq!(&a, &b, "\n\nDifference: {}", difference(&a, &b));
+}
+
 #[test]
 fn test_shade1() {
     setup();
@@ -89,6 +98,8 @@ fn test_shade1() {
                 num_sets: 0,
                 num_bindings: HashMap::new(),
                 descriptions: HashMap::new(),
+                num_constants: 0,
+                pc_ranges: Vec::new(),
             },
         },
         vert_input: VertInput {
@@ -107,14 +118,7 @@ fn test_shade1() {
         }),
     };
     let entry = parse("vert1.glsl", "frag1.glsl");
-    let entry = format!("{:?}", entry);
-    let target = format!("{:?}", target);
-    assert_eq!(
-        &entry,
-        &target,
-        "\n\nDifference: {}",
-        difference(&entry, &target)
-    );
+    do_test(&entry, &target);
 }
 
 #[test]
@@ -156,6 +160,8 @@ fn test_shade2() {
                 num_sets: 0,
                 num_bindings: HashMap::new(),
                 descriptions: HashMap::new(),
+                num_constants: 0,
+                pc_ranges: Vec::new(),
             },
         },
         vert_input: VertInput {
@@ -190,14 +196,7 @@ fn test_shade2() {
         }),
     };
     let entry = parse("vert2.glsl", "frag2.glsl");
-    let entry = format!("{:?}", entry);
-    let target = format!("{:?}", target);
-    assert_eq!(
-        &entry,
-        &target,
-        "\n\nDifference: {}",
-        difference(&entry, &target)
-    );
+    do_test(&entry, &target);
 }
 
 #[test]
@@ -245,6 +244,8 @@ fn test_shade3() {
                 )]
                 .into_iter()
                 .collect(),
+                num_constants: 0,
+                pc_ranges: Vec::new(),
             },
         },
         vert_input: VertInput {
@@ -267,21 +268,70 @@ fn test_shade3() {
     do_test(&entry.frag_output, &target.frag_output);
     do_test(&entry.vert_input, &target.vert_input);
     do_test(&entry.vert_output, &target.vert_output);
-    do_test(&descriptor_layout(&entry.frag_layout), &descriptor_layout(&target.frag_layout));
-    do_test(&descriptor_layout(&entry.vert_layout), &descriptor_layout(&target.vert_layout));
-
+    do_test(
+        &descriptor_layout(&entry.frag_layout),
+        &descriptor_layout(&target.frag_layout),
+    );
+    do_test(
+        &descriptor_layout(&entry.vert_layout),
+        &descriptor_layout(&target.vert_layout),
+    );
 }
 
-fn do_test<T>(a: &T, b: &T) 
-where
-T: std::fmt::Debug,
-{
-    let a = format!("{:?}", a);
-    let b = format!("{:?}", b);
-    assert_eq!(
-        &a,
-        &b,
-        "\n\nDifference: {}",
-        difference(&a, &b)
+#[test]
+fn test_shade4() {
+    setup();
+    let target = Entry {
+        frag_input: FragInput { inputs: Vec::new() },
+        frag_output: FragOutput {
+            outputs: vec![ShaderInterfaceDefEntry {
+                location: 0..1,
+                format: Format::R32G32B32A32Sfloat,
+                name: Some(Cow::Borrowed("f_color")),
+            }],
+        },
+        frag_layout: FragLayout {
+            stages: ShaderStages {
+                fragment: true,
+                ..ShaderStages::none()
+            },
+            layout_data: LayoutData {
+                num_sets: 0,
+                num_bindings: HashMap::new(),
+                descriptions: HashMap::new(),
+                num_constants: 1,
+                pc_ranges: vec![PipelineLayoutDescPcRange {
+                    offset: 0,
+                    size: 16,
+                    stages: ShaderStages {
+                        fragment: true,
+                        ..ShaderStages::none()
+                    },
+                }],
+            },
+        },
+        vert_input: VertInput {
+            inputs: vec![ShaderInterfaceDefEntry {
+                location: 0..1,
+                format: Format::R32G32Sfloat,
+                name: Some(Cow::Borrowed("position")),
+            }],
+        },
+        vert_output: VertOutput {
+            outputs: Vec::new(),
+        },
+        vert_layout: VertLayout(ShaderStages {
+            vertex: true,
+            ..ShaderStages::none()
+        }),
+    };
+    let entry = parse("vert4.glsl", "frag4.glsl");
+    do_test(&entry.frag_input, &target.frag_input);
+    do_test(&entry.frag_output, &target.frag_output);
+    do_test(&entry.vert_input, &target.vert_input);
+    do_test(&entry.vert_output, &target.vert_output);
+    do_test(
+        &descriptor_layout(&entry.frag_layout),
+        &descriptor_layout(&target.frag_layout),
     );
 }

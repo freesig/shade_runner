@@ -1,11 +1,12 @@
-use crate::sr; 
-use crate::srvk::{SpirvTy,DescriptorDescInfo};
-use std::borrow::Cow;
-use crate::vk::pipeline::shader::ShaderInterfaceDefEntry;
-use crate::vk::descriptor::descriptor::*;
-use std::collections::HashMap;
-use crate::CompiledShaders;
 use crate::layouts::*;
+use crate::sr;
+use crate::srvk::{DescriptorDescInfo, SpirvTy};
+use crate::vk::descriptor::descriptor::*;
+use crate::vk::descriptor::pipeline_layout::PipelineLayoutDescPcRange;
+use crate::vk::pipeline::shader::ShaderInterfaceDefEntry;
+use crate::CompiledShaders;
+use std::borrow::Cow;
+use std::collections::HashMap;
 
 pub struct ShaderInterfaces {
     pub inputs: Vec<ShaderInterfaceDefEntry>,
@@ -17,27 +18,37 @@ pub struct LayoutData {
     pub num_sets: usize,
     pub num_bindings: HashMap<usize, usize>,
     pub descriptions: HashMap<usize, HashMap<usize, DescriptorDesc>>,
+    pub num_constants: usize,
+    pub pc_ranges: Vec<PipelineLayoutDescPcRange>,
 }
 
 pub fn create_entry(shaders: &CompiledShaders) -> Entry {
     let vertex_interfaces = create_interfaces(&shaders.vertex);
     let fragment_interfaces = create_interfaces(&shaders.fragment);
     let fragment_layout = create_layouts(&shaders.fragment);
-    let frag_input = FragInput{ inputs: fragment_interfaces.inputs };
-    let frag_output = FragOutput{ outputs: fragment_interfaces.outputs };
+    let frag_input = FragInput {
+        inputs: fragment_interfaces.inputs,
+    };
+    let frag_output = FragOutput {
+        outputs: fragment_interfaces.outputs,
+    };
     let frag_layout = FragLayout {
         stages: ShaderStages {
-                fragment: true,
-                ..ShaderStages::none()
+            fragment: true,
+            ..ShaderStages::none()
         },
         layout_data: fragment_layout,
     };
-    let vert_input = VertInput{ inputs: vertex_interfaces.inputs };
-    let vert_output = VertOutput{ outputs: vertex_interfaces.outputs };
+    let vert_input = VertInput {
+        inputs: vertex_interfaces.inputs,
+    };
+    let vert_output = VertOutput {
+        outputs: vertex_interfaces.outputs,
+    };
     let vert_layout = VertLayout(ShaderStages {
-                vertex: true,
-                ..ShaderStages::none()
-            });
+        vertex: true,
+        ..ShaderStages::none()
+    });
     Entry {
         frag_input,
         frag_output,
@@ -46,7 +57,6 @@ pub fn create_entry(shaders: &CompiledShaders) -> Entry {
         frag_layout,
         vert_layout,
     }
-
 }
 
 fn create_interfaces(data: &[u32]) -> ShaderInterfaces {
@@ -94,7 +104,8 @@ fn create_interfaces(data: &[u32]) -> ShaderInterfaces {
 fn create_layouts(data: &[u32]) -> LayoutData {
     sr::ShaderModule::load_u32_data(data)
         .map(|m| {
-            m.enumerate_descriptor_sets(None)
+            let (num_sets, num_bindings, descriptions) = m
+                .enumerate_descriptor_sets(None)
                 .map(|sets| {
                     let num_sets = sets.len();
                     let num_bindings = sets
@@ -107,9 +118,11 @@ fn create_layouts(data: &[u32]) -> LayoutData {
                     let descriptions = sets
                         .iter()
                         .map(|i| {
-                            let desc = i.bindings.iter()
+                            let desc = i
+                                .bindings
+                                .iter()
                                 .map(|b| {
-                                    let info = DescriptorDescInfo{
+                                    let info = DescriptorDescInfo {
                                         descriptor_type: b.descriptor_type,
                                         image: b.image,
                                     };
@@ -125,18 +138,35 @@ fn create_layouts(data: &[u32]) -> LayoutData {
                                     };
                                     (b.binding as usize, d)
                                 })
-                            .collect::<HashMap<usize, DescriptorDesc>>();
+                                .collect::<HashMap<usize, DescriptorDesc>>();
                             (i.set as usize, desc)
                         })
                         .collect::<HashMap<usize, HashMap<usize, DescriptorDesc>>>();
-                    LayoutData {
-                        num_sets,
-                        num_bindings,
-                        descriptions,
-                    }
+                    (num_sets, num_bindings, descriptions)
                 })
-                .expect("Failed to pass outputs")
+                .expect("Failed to pass descriptors");
+            let (num_constants, pc_ranges) = m
+                .enumerate_push_constant_blocks(None)
+                .map(|constants| {
+                    let num_constants = constants.len();
+                    let pc_ranges = constants
+                        .iter()
+                        .map(|pc| PipelineLayoutDescPcRange {
+                            offset: pc.offset as usize,
+                            size: pc.size as usize,
+                            stages: ShaderStages::all(),
+                        })
+                        .collect::<Vec<PipelineLayoutDescPcRange>>();
+                    (num_constants, pc_ranges)
+                })
+                .expect("Failed to pass push constants");
+            LayoutData {
+                num_sets,
+                num_bindings,
+                descriptions,
+                num_constants,
+                pc_ranges,
+            }
         })
         .expect("failed to load module")
 }
-
