@@ -100,8 +100,9 @@ fn create_watch(
         if let Ok(_) = thread_rx.try_recv() {
             break 'watch_loop;
         }
-        if let Ok(notify::DebouncedEvent::Create(_)) =
-            notify_rx.recv_timeout(Duration::from_secs(1))
+        if let Ok(notify::DebouncedEvent::Create(_))
+        | Ok(notify::DebouncedEvent::NoticeWrite(_))
+        | Ok(notify::DebouncedEvent::Write(_)) = notify_rx.recv_timeout(Duration::from_secs(1))
         {
             loader.reload();
         }
