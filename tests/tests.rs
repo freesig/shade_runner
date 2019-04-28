@@ -112,10 +112,19 @@ fn test_shade1() {
         vert_output: VertOutput {
             outputs: Vec::new(),
         },
-        vert_layout: VertLayout(ShaderStages {
-            vertex: true,
-            ..ShaderStages::none()
-        }),
+        vert_layout: VertLayout {
+            stages: ShaderStages {
+                vertex: true,
+                ..ShaderStages::none()
+            },
+            layout_data: LayoutData {
+                num_sets: 0,
+                num_bindings: HashMap::new(),
+                descriptions: HashMap::new(),
+                num_constants: 0,
+                pc_ranges: Vec::new(),
+            },
+        },
     };
     let entry = parse("vert1.glsl", "frag1.glsl");
     do_test(&entry, &target);
@@ -190,10 +199,19 @@ fn test_shade2() {
                 },
             ],
         },
-        vert_layout: VertLayout(ShaderStages {
-            vertex: true,
-            ..ShaderStages::none()
-        }),
+        vert_layout: VertLayout {
+            stages: ShaderStages {
+                vertex: true,
+                ..ShaderStages::none()
+            },
+            layout_data: LayoutData {
+                num_sets: 0,
+                num_bindings: HashMap::new(),
+                descriptions: HashMap::new(),
+                num_constants: 0,
+                pc_ranges: Vec::new(),
+            },
+        },
     };
     let entry = parse("vert2.glsl", "frag2.glsl");
     do_test(&entry, &target);
@@ -258,10 +276,19 @@ fn test_shade3() {
         vert_output: VertOutput {
             outputs: Vec::new(),
         },
-        vert_layout: VertLayout(ShaderStages {
-            vertex: true,
-            ..ShaderStages::none()
-        }),
+        vert_layout: VertLayout {
+            stages: ShaderStages {
+                vertex: true,
+                ..ShaderStages::none()
+            },
+            layout_data: LayoutData {
+                num_sets: 0,
+                num_bindings: HashMap::new(),
+                descriptions: HashMap::new(),
+                num_constants: 0,
+                pc_ranges: Vec::new(),
+            },
+        },
     };
     let entry = parse("vert3.glsl", "frag3.glsl");
     do_test(&entry.frag_input, &target.frag_input);
@@ -320,10 +347,19 @@ fn test_shade4() {
         vert_output: VertOutput {
             outputs: Vec::new(),
         },
-        vert_layout: VertLayout(ShaderStages {
-            vertex: true,
-            ..ShaderStages::none()
-        }),
+        vert_layout: VertLayout {
+            stages: ShaderStages {
+                vertex: true,
+                ..ShaderStages::none()
+            },
+            layout_data: LayoutData {
+                num_sets: 0,
+                num_bindings: HashMap::new(),
+                descriptions: HashMap::new(),
+                num_constants: 0,
+                pc_ranges: Vec::new(),
+            },
+        },
     };
     let entry = parse("vert4.glsl", "frag4.glsl");
     do_test(&entry.frag_input, &target.frag_input);

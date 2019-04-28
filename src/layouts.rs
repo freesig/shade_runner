@@ -113,27 +113,38 @@ unsafe impl ShaderInterfaceDef for VertOutput {
 pub type VertOutputIter = std::vec::IntoIter<ShaderInterfaceDefEntry>;
 
 // This structure describes layout of this stage.
-#[derive(Debug, Copy, Clone)]
-pub struct VertLayout(pub ShaderStages);
+#[derive(Debug, Clone)]
+pub struct VertLayout {
+    pub stages: ShaderStages,
+    pub layout_data: LayoutData,
+}
 unsafe impl PipelineLayoutDesc for VertLayout {
-    // Number of descriptor sets it takes.
     fn num_sets(&self) -> usize {
-        0
+        self.layout_data.num_sets
     }
-    // Number of entries (bindings) in each set.
-    fn num_bindings_in_set(&self, _set: usize) -> Option<usize> {
-        None
+    fn num_bindings_in_set(&self, set: usize) -> Option<usize> {
+        self.layout_data.num_bindings.get(&set).map(|&i| i)
     }
-    // Descriptor descriptions.
-    fn descriptor(&self, _set: usize, _binding: usize) -> Option<DescriptorDesc> {
-        None
+    fn descriptor(&self, set: usize, binding: usize) -> Option<DescriptorDesc> {
+        self.layout_data.descriptions.get(&set)
+            .and_then(|s|s.get(&binding))
+            .map(|desc| {
+                let mut desc = desc.clone();
+                desc.stages = self.stages.clone();
+                desc
+            })
+        
     }
-    // Number of push constants ranges (think: number of push constants).
     fn num_push_constants_ranges(&self) -> usize {
-        0
+        self.layout_data.num_constants
     }
-    // Each push constant range in memory.
-    fn push_constants_range(&self, _num: usize) -> Option<PipelineLayoutDescPcRange> {
-        None
+    fn push_constants_range(&self, num: usize) -> Option<PipelineLayoutDescPcRange> {
+        self.layout_data.pc_ranges.get(num)
+            .map(|desc| {
+                let mut desc = desc.clone();
+                desc.stages = self.stages.clone();
+                desc
+            })
+
     }
 }

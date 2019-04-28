@@ -24,6 +24,7 @@ pub struct LayoutData {
 
 pub fn create_entry(shaders: &CompiledShaders) -> Entry {
     let vertex_interfaces = create_interfaces(&shaders.vertex);
+    let vertex_layout = create_layouts(&shaders.vertex);
     let fragment_interfaces = create_interfaces(&shaders.fragment);
     let fragment_layout = create_layouts(&shaders.fragment);
     let frag_input = FragInput {
@@ -45,10 +46,13 @@ pub fn create_entry(shaders: &CompiledShaders) -> Entry {
     let vert_output = VertOutput {
         outputs: vertex_interfaces.outputs,
     };
-    let vert_layout = VertLayout(ShaderStages {
-        vertex: true,
-        ..ShaderStages::none()
-    });
+    let vert_layout = VertLayout {
+        stages: ShaderStages {
+            vertex: true,
+            ..ShaderStages::none()
+        },
+        layout_data: vertex_layout,
+    };
     Entry {
         frag_input,
         frag_output,
