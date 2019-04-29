@@ -65,7 +65,7 @@ where
     let mut fragment_path = path.clone();
     fragment_path.push(fragment);
     let shader = shade_runner::load(vertex_path, fragment_path).expect("Failed to compile");
-    shade_runner::parse(&shader)
+    shade_runner::parse(&shader).unwrap()
 }
 
 fn do_test<T>(a: &T, b: &T)

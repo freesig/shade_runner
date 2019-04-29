@@ -8,6 +8,6 @@ fn main() {
     let mut frag_path = project_root.clone();
     frag_path.push(PathBuf::from("examples/shaders/frag.glsl"));
     let shader = sr::load(vert_path, frag_path).expect("Failed to compile");
-    let vulkano_entry = sr::parse(&shader);
+    let vulkano_entry = sr::parse(&shader).expect("failed to parse");
     dbg!(vulkano_entry);
 }

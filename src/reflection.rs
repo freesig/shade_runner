@@ -1,3 +1,4 @@
+use crate::error::Error;
 use crate::layouts::*;
 use crate::sr;
 use crate::srvk::{DescriptorDescInfo, SpirvTy};
@@ -5,7 +6,6 @@ use crate::vk::descriptor::descriptor::*;
 use crate::vk::descriptor::pipeline_layout::PipelineLayoutDescPcRange;
 use crate::vk::pipeline::shader::ShaderInterfaceDefEntry;
 use crate::CompiledShaders;
-use crate::error::Error;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::convert::TryFrom;
@@ -25,9 +25,9 @@ pub struct LayoutData {
 }
 
 pub fn create_entry(shaders: &CompiledShaders) -> Result<Entry, Error> {
-    let vertex_interfaces = create_interfaces(&shaders.vertex);
+    let vertex_interfaces = create_interfaces(&shaders.vertex)?;
     let vertex_layout = create_layouts(&shaders.vertex)?;
-    let fragment_interfaces = create_interfaces(&shaders.fragment);
+    let fragment_interfaces = create_interfaces(&shaders.fragment)?;
     let fragment_layout = create_layouts(&shaders.fragment)?;
     let frag_input = FragInput {
         inputs: fragment_interfaces.inputs,
@@ -65,62 +65,60 @@ pub fn create_entry(shaders: &CompiledShaders) -> Result<Entry, Error> {
     })
 }
 
-fn create_interfaces(data: &[u32]) -> ShaderInterfaces {
+fn create_interfaces(data: &[u32]) -> Result<ShaderInterfaces, Error> {
     sr::ShaderModule::load_u32_data(data)
+        .map_err(|e| Error::LoadingData(e.to_string()))
         .map(|m| {
             let inputs = m
                 .enumerate_input_variables(None)
-                .map(|inputs| {
+                .map_err(|e| Error::LoadingData(e.to_string()))
+                .and_then(|inputs| {
                     inputs
                         .iter()
                         .filter(|i| {
                             !i.decoration_flags
                                 .contains(sr::types::ReflectDecorationFlags::BUILT_IN)
                         })
-                        .map(|i| ShaderInterfaceDefEntry {
+                        .map(|i| Ok(ShaderInterfaceDefEntry {
                             location: i.location..(i.location + 1),
-                            format: SpirvTy::from(i.format).inner(),
+                            format: SpirvTy::try_from(i.format)?.inner(),
                             name: Some(Cow::from(i.name.clone())),
-                        })
-                        .collect::<Vec<ShaderInterfaceDefEntry>>()
-                })
-                .expect("Failed to pass inputs");
+                        }))
+                        .collect::<Result<Vec<ShaderInterfaceDefEntry>, _>>()
+                });
             let outputs = m
                 .enumerate_output_variables(None)
-                .map(|outputs| {
+                .map_err(|e| Error::LoadingData(e.to_string()))
+                .and_then(|outputs| {
                     outputs
                         .iter()
                         .filter(|i| {
                             !i.decoration_flags
                                 .contains(sr::types::ReflectDecorationFlags::BUILT_IN)
                         })
-                        .map(|i| ShaderInterfaceDefEntry {
+                        .map(|i| Ok(ShaderInterfaceDefEntry {
                             location: i.location..(i.location + 1),
-                            format: SpirvTy::from(i.format).inner(),
+                            format: SpirvTy::try_from(i.format)?.inner(),
                             name: Some(Cow::from(i.name.clone())),
-                        })
-                        .collect::<Vec<ShaderInterfaceDefEntry>>()
-                })
-                .expect("Failed to pass outputs");
-            ShaderInterfaces { inputs, outputs }
+                        }))
+                        .collect::<Result<Vec<ShaderInterfaceDefEntry>, _>>()
+                });
+            inputs.and_then(|inputs| outputs.map(|outputs| ShaderInterfaces { inputs, outputs } ))
         })
-        .expect("failed to load module")
+    .and_then(|t| t)
 }
 
 fn create_layouts(data: &[u32]) -> Result<LayoutData, Error> {
     sr::ShaderModule::load_u32_data(data)
         .map(|m| {
-            //let (num_sets, num_bindings, descriptions) = m
-            let descs = 
-                m.enumerate_descriptor_sets(None)
-                .map(|sets| {
+            let descs: Result<_, Error> = m
+                .enumerate_descriptor_sets(None)
+                .map_err(|e| Error::LoadingData(e.to_string()))
+                .and_then(|sets| {
                     let num_sets = sets.len();
                     let num_bindings = sets
                         .iter()
-                        .map(|i| {
-                            dbg!(&i);
-                            (i.set as usize, i.bindings.len())
-                        })
+                        .map(|i| (i.set as usize, i.bindings.len()))
                         .collect::<HashMap<usize, usize>>();
                     let descriptions = sets
                         .iter()
@@ -133,8 +131,7 @@ fn create_layouts(data: &[u32]) -> Result<LayoutData, Error> {
                                         descriptor_type: b.descriptor_type,
                                         image: b.image,
                                     };
-                                    let ty = SpirvTy::<DescriptorDescTy>::try_from(info)?;
-                                    let ty = ty.inner();
+                                    let ty = SpirvTy::<DescriptorDescTy>::try_from(info)?.inner();
                                     let stages = ShaderStages::none();
                                     let d = DescriptorDesc {
                                         ty,
@@ -146,17 +143,15 @@ fn create_layouts(data: &[u32]) -> Result<LayoutData, Error> {
                                     };
                                     Ok((b.binding as usize, d))
                                 })
-                            .flat_map(|d| d.ok())
-                                .collect::<HashMap<usize, DescriptorDesc>>();
-                            (i.set as usize, desc)
+                                .collect::<Result<HashMap<usize, DescriptorDesc>, Error>>();
+                            desc.and_then(|d| Ok((i.set as usize, d)))
                         })
-                        .collect::<HashMap<usize, HashMap<usize, DescriptorDesc>>>();
-                    (num_sets, num_bindings, descriptions)
-                })
-            .into_iter();
-            //let (num_constants, pc_ranges) = m
-            let pcs = 
-                m.enumerate_push_constant_blocks(None)
+                        .collect::<Result<HashMap<usize, _>, Error>>();
+                    descriptions.map(|d| (num_sets, num_bindings, d))
+                });
+            let pcs = m
+                .enumerate_push_constant_blocks(None)
+                .map_err(|e| Error::LoadingData(e.to_string()))
                 .map(|constants| {
                     let num_constants = constants.len();
                     let pc_ranges = constants
@@ -168,15 +163,17 @@ fn create_layouts(data: &[u32]) -> Result<LayoutData, Error> {
                         })
                         .collect::<Vec<PipelineLayoutDescPcRange>>();
                     (num_constants, pc_ranges)
+                });
+            descs.and_then(|(num_sets, num_bindings, descriptions)| {
+                pcs.map(|(num_constants, pc_ranges)| LayoutData {
+                    num_sets,
+                    num_bindings,
+                    descriptions,
+                    num_constants,
+                    pc_ranges,
                 })
-            .into_iter();
-            descs.flat_map(|(num_sets, num_bindings, descriptions)| pcs.map(|(num_constants, pc_ranges)|
-            LayoutData {
-                num_sets,
-                num_bindings,
-                descriptions,
-                num_constants,
-                pc_ranges,
-            })).next()
+            })
         })
+        .map_err(|e| Error::LoadingData(e.to_string()))
+        .and_then(|t| t)
 }
