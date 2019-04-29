@@ -79,14 +79,16 @@ impl Drop for Handler {
 }
 
 fn create_watch(
-    vert_path: PathBuf,
-    frag_path: PathBuf,
+    mut vert_path: PathBuf,
+    mut frag_path: PathBuf,
 ) -> (Handler, mpsc::Receiver<Result<Message, Error>>) {
     let (notify_tx, notify_rx) = mpsc::channel();
     let (thread_tx, thread_rx) = mpsc::channel();
     let mut watcher: RecommendedWatcher =
         Watcher::new(notify_tx, Duration::from_millis(50)).expect("failed to create watcher");
 
+    vert_path.pop();
+    frag_path.pop();
     watcher
         .watch(&vert_path, RecursiveMode::NonRecursive)
         .expect("failed to add vertex shader to notify");
@@ -101,7 +103,6 @@ fn create_watch(
             break 'watch_loop;
         }
         if let Ok(notify::DebouncedEvent::Create(_))
-        | Ok(notify::DebouncedEvent::NoticeWrite(_))
         | Ok(notify::DebouncedEvent::Write(_)) = notify_rx.recv_timeout(Duration::from_secs(1))
         {
             loader.reload();
