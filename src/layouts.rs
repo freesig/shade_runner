@@ -56,7 +56,7 @@ unsafe impl PipelineLayoutDesc for FragLayout {
         self.layout_data.num_sets
     }
     fn num_bindings_in_set(&self, set: usize) -> Option<usize> {
-        self.layout_data.num_bindings.get(&set).copied()
+        self.layout_data.num_bindings.get(&set).map(|&b|b)
     }
     fn descriptor(&self, set: usize, binding: usize) -> Option<DescriptorDesc> {
         self.layout_data.descriptions.get(&set)
@@ -123,7 +123,7 @@ unsafe impl PipelineLayoutDesc for VertLayout {
         self.layout_data.num_sets
     }
     fn num_bindings_in_set(&self, set: usize) -> Option<usize> {
-        self.layout_data.num_bindings.get(&set).copied()
+        self.layout_data.num_bindings.get(&set).map(|&b|b)
     }
     fn descriptor(&self, set: usize, binding: usize) -> Option<DescriptorDesc> {
         self.layout_data.descriptions.get(&set)
