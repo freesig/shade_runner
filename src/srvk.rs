@@ -1,7 +1,9 @@
 use crate::sr; 
 use crate::vk;
+use crate::error::{ConvertError, Error};
 use vk::descriptor::descriptor::*;
 use vk::format::Format;
+use std::convert::TryFrom;
 
 pub struct SpirvTy<T> {
     inner: T,
@@ -12,39 +14,41 @@ pub struct DescriptorDescInfo {
     pub image: sr::types::ReflectImageTraits,
 }
 
+
 impl<T> SpirvTy<T> {
     pub fn inner(self) -> T {
         self.inner
     }
 }
 
-impl From<DescriptorDescInfo> for SpirvTy<DescriptorDescTy> {
-    fn from(d: DescriptorDescInfo) -> Self {
+impl TryFrom<DescriptorDescInfo> for SpirvTy<DescriptorDescTy> {
+    type Error = Error;
+    fn try_from(d: DescriptorDescInfo) -> Result<Self, Self::Error> {
         use sr::types::ReflectDescriptorType as SR;
         use DescriptorDescTy as VK;
-        let t = match d.descriptor_type {
-            SR::Undefined => unreachable!(),
-            SR::Sampler => VK::Sampler,
-            SR::CombinedImageSampler => VK::CombinedImageSampler(SpirvTy::from(d.image).inner()),
-            SR::SampledImage => unreachable!(),
-            SR::StorageImage => unreachable!(),
-            SR::UniformTexelBuffer => unreachable!(),
-            SR::StorageTexelBuffer => unreachable!(),
-            SR::UniformBuffer => unreachable!(),
-            SR::StorageBuffer => unreachable!(),
-            SR::UniformBufferDynamic => unreachable!(),
-            SR::StorageBufferDynamic => unreachable!(),
-            SR::InputAttachment => unreachable!(),
-            SR::AccelerationStructureNV => unreachable!(),
-        };
-        SpirvTy {
-            inner: t,
+        match d.descriptor_type {
+            SR::Undefined => Err(ConvertError::Unimplemented),
+            SR::Sampler => Ok(VK::Sampler),
+            SR::CombinedImageSampler => Ok(VK::CombinedImageSampler(SpirvTy::try_from(d.image)?.inner())),
+            SR::SampledImage => Err(ConvertError::Unimplemented),
+            SR::StorageImage => Err(ConvertError::Unimplemented),
+            SR::UniformTexelBuffer => Err(ConvertError::Unimplemented),
+            SR::StorageTexelBuffer => Err(ConvertError::Unimplemented),
+            SR::UniformBuffer => Err(ConvertError::Unimplemented),
+            SR::StorageBuffer => Err(ConvertError::Unimplemented),
+            SR::UniformBufferDynamic => Err(ConvertError::Unimplemented),
+            SR::StorageBufferDynamic => Err(ConvertError::Unimplemented),
+            SR::InputAttachment => Err(ConvertError::Unimplemented),
+            SR::AccelerationStructureNV => Err(ConvertError::Unimplemented),
         }
+        .map(|t| SpirvTy{ inner: t })
+        .map_err(Error::Layout)
     }
 }
 
-impl From<sr::types::ReflectImageTraits> for SpirvTy<DescriptorImageDesc> {
-    fn from(d: sr::types::ReflectImageTraits) -> Self {
+impl TryFrom<sr::types::ReflectImageTraits> for SpirvTy<DescriptorImageDesc> {
+    type Error = Error;
+    fn try_from(d: sr::types::ReflectImageTraits) -> Result<Self, Self::Error> {
         let conv_array_layers = |a, d|{
             if a != 0 {
                 DescriptorImageDescArray::Arrayed{max_layers: Some(d)}
@@ -54,29 +58,31 @@ impl From<sr::types::ReflectImageTraits> for SpirvTy<DescriptorImageDesc> {
         };
         let t = DescriptorImageDesc {
             sampled: d.sampled != 0,
-            dimensions: SpirvTy::from(d.dim).inner(),
+            dimensions: SpirvTy::try_from(d.dim)?.inner(),
             // TODO figure out how to do format correctly
             //format: Some(SpirvTy::from(d.image_format).inner()),
             format: None,
             multisampled: d.ms != 0,
             array_layers: conv_array_layers(d.arrayed, d.depth),
         };
-        SpirvTy{inner: t}
+        Ok(SpirvTy{inner: t})
     }
 }
 
-impl From<sr::types::variable::ReflectDimension> for SpirvTy<DescriptorImageDescDimensions> {
-    fn from(d: sr::types::variable::ReflectDimension) -> Self {
+impl TryFrom<sr::types::variable::ReflectDimension> for SpirvTy<DescriptorImageDescDimensions> {
+    type Error = Error;
+    fn try_from(d: sr::types::variable::ReflectDimension) -> Result<Self, Self::Error> {
         use sr::types::variable::ReflectDimension::*;
         use DescriptorImageDescDimensions::*;
-        let inner = match d {
-            Type1d => OneDimensional,
-            Type2d => TwoDimensional,
-            Type3d => ThreeDimensional,
-            sr::types::variable::ReflectDimension::Cube => DescriptorImageDescDimensions::Cube,
-            _ => unimplemented!(),
-        };
-        SpirvTy{ inner }
+        match d {
+            Type1d => Ok(OneDimensional),
+            Type2d => Ok(TwoDimensional),
+            Type3d => Ok(ThreeDimensional),
+            sr::types::variable::ReflectDimension::Cube => Ok(DescriptorImageDescDimensions::Cube),
+            _ => Err(ConvertError::Unimplemented),
+        }
+        .map(|t| SpirvTy{ inner: t })
+        .map_err(Error::Layout)
     }
 }
 
@@ -127,16 +133,20 @@ impl From<sr::types::image::ReflectImageFormat> for SpirvTy<Format> {
             R16_UINT =>R16Uint,
             R8_UINT =>R8Uint,
         };
-        SpirvTy{ inner }
+        SpirvTy{ inner };
+        // This function shouldn't be called yet because 
+        // it is not implemented correctly
+        unreachable!()
     }
 }
 
-impl From<sr::types::ReflectFormat> for SpirvTy<Format> {
-    fn from(f: sr::types::ReflectFormat) -> Self {
+impl TryFrom<sr::types::ReflectFormat> for SpirvTy<Format> {
+    type Error = Error;
+    fn try_from(f: sr::types::ReflectFormat) -> Result<Self, Self::Error> {
         use sr::types::ReflectFormat::*;
         use Format::*;
         let t = match f {
-            Undefined => unreachable!(),
+            Undefined => Err(Error::Layout(ConvertError::Unimplemented))?,
             R32_UINT => R32Uint,
             R32_SINT => R32Sint,
             R32_SFLOAT => R32Sfloat,
@@ -150,6 +160,6 @@ impl From<sr::types::ReflectFormat> for SpirvTy<Format> {
             R32G32B32A32_SINT => R32G32B32A32Sint,
             R32G32B32A32_SFLOAT => R32G32B32A32Sfloat,
         };
-        SpirvTy { inner: t }
+        Ok(SpirvTy { inner: t })
     }
 }

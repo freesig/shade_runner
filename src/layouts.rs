@@ -56,14 +56,14 @@ unsafe impl PipelineLayoutDesc for FragLayout {
         self.layout_data.num_sets
     }
     fn num_bindings_in_set(&self, set: usize) -> Option<usize> {
-        self.layout_data.num_bindings.get(&set).map(|&i| i)
+        self.layout_data.num_bindings.get(&set).copied()
     }
     fn descriptor(&self, set: usize, binding: usize) -> Option<DescriptorDesc> {
         self.layout_data.descriptions.get(&set)
             .and_then(|s|s.get(&binding))
             .map(|desc| {
                 let mut desc = desc.clone();
-                desc.stages = self.stages.clone();
+                desc.stages = self.stages;
                 desc
             })
         
@@ -74,8 +74,8 @@ unsafe impl PipelineLayoutDesc for FragLayout {
     fn push_constants_range(&self, num: usize) -> Option<PipelineLayoutDescPcRange> {
         self.layout_data.pc_ranges.get(num)
             .map(|desc| {
-                let mut desc = desc.clone();
-                desc.stages = self.stages.clone();
+                let mut desc = *desc;
+                desc.stages = self.stages;
                 desc
             })
 
@@ -123,14 +123,14 @@ unsafe impl PipelineLayoutDesc for VertLayout {
         self.layout_data.num_sets
     }
     fn num_bindings_in_set(&self, set: usize) -> Option<usize> {
-        self.layout_data.num_bindings.get(&set).map(|&i| i)
+        self.layout_data.num_bindings.get(&set).copied()
     }
     fn descriptor(&self, set: usize, binding: usize) -> Option<DescriptorDesc> {
         self.layout_data.descriptions.get(&set)
             .and_then(|s|s.get(&binding))
             .map(|desc| {
                 let mut desc = desc.clone();
-                desc.stages = self.stages.clone();
+                desc.stages = self.stages;
                 desc
             })
         
@@ -141,8 +141,8 @@ unsafe impl PipelineLayoutDesc for VertLayout {
     fn push_constants_range(&self, num: usize) -> Option<PipelineLayoutDescPcRange> {
         self.layout_data.pc_ranges.get(num)
             .map(|desc| {
-                let mut desc = desc.clone();
-                desc.stages = self.stages.clone();
+                let mut desc = *desc;
+                desc.stages = self.stages;
                 desc
             })
 

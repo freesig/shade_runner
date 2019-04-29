@@ -25,18 +25,18 @@ pub struct Message {
 }
 
 impl Watch {
-    pub fn new<T>(vertex: T, fragment: T) -> Self
+    pub fn create<T>(vertex: T, fragment: T) -> Result<Self, Error>
     where
         T: AsRef<Path>,
     {
         let (handler, rx) = create_watch(
             vertex.as_ref().to_path_buf(),
             fragment.as_ref().to_path_buf(),
-        );
-        Watch {
+        )?;
+        Ok(Watch {
             _handler: handler,
             rx,
-        }
+        })
     }
 }
 
@@ -56,7 +56,8 @@ impl Loader {
         match crate::load(&self.vertex, &self.fragment) {
             Ok(shaders) => {
                 let entry = crate::parse(&shaders);
-                self.tx.send(Ok(Message { shaders, entry })).ok()
+                let msg = entry.map(|entry| Message { shaders, entry });
+                self.tx.send(msg).ok()
             }
             Err(e) => self.tx.send(Err(e)).ok(),
         };
@@ -79,31 +80,33 @@ impl Drop for Handler {
 }
 
 fn create_watch(
-    mut vert_path: PathBuf,
-    mut frag_path: PathBuf,
-) -> (Handler, mpsc::Receiver<Result<Message, Error>>) {
+    vert_path: PathBuf,
+    frag_path: PathBuf,
+) -> Result<(Handler, mpsc::Receiver<Result<Message, Error>>), Error> {
     let (notify_tx, notify_rx) = mpsc::channel();
     let (thread_tx, thread_rx) = mpsc::channel();
     let mut watcher: RecommendedWatcher =
-        Watcher::new(notify_tx, Duration::from_millis(50)).expect("failed to create watcher");
+        Watcher::new(notify_tx, Duration::from_millis(50)).map_err(Error::FileWatch)?;
 
-    vert_path.pop();
-    frag_path.pop();
+    let mut vp = vert_path.clone();
+    let mut fp = frag_path.clone();
+    vp.pop();
+    fp.pop();
     watcher
-        .watch(&vert_path, RecursiveMode::NonRecursive)
-        .expect("failed to add vertex shader to notify");
+        .watch(&vp, RecursiveMode::NonRecursive)
+        .map_err(Error::FileWatch)?;
     watcher
-        .watch(&frag_path, RecursiveMode::NonRecursive)
-        .expect("failed to add fragment shader to notify");
+        .watch(&fp, RecursiveMode::NonRecursive)
+        .map_err(Error::FileWatch)?;
 
     let (loader, rx) = Loader::create(vert_path, frag_path);
 
     let handle = thread::spawn(move || 'watch_loop: loop {
-        if let Ok(_) = thread_rx.try_recv() {
+        if thread_rx.try_recv().is_ok() {
             break 'watch_loop;
         }
-        if let Ok(notify::DebouncedEvent::Create(_))
-        | Ok(notify::DebouncedEvent::Write(_)) = notify_rx.recv_timeout(Duration::from_secs(1))
+        if let Ok(notify::DebouncedEvent::Create(_)) | Ok(notify::DebouncedEvent::Write(_)) =
+            notify_rx.recv_timeout(Duration::from_secs(1))
         {
             loader.reload();
         }
@@ -114,5 +117,5 @@ fn create_watch(
         handle,
         _watcher: watcher,
     };
-    (handler, rx)
+    Ok((handler, rx))
 }
