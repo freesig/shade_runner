@@ -25,13 +25,16 @@ pub struct Message {
 }
 
 impl Watch {
-    pub fn create<T>(vertex: T, fragment: T) -> Result<Self, Error>
+    /// Paths to the vertex and fragment shaders.
+    /// Frequency is how often the watcher will check the directory.
+    pub fn create<T>(vertex: T, fragment: T, frequency: Duration) -> Result<Self, Error>
     where
         T: AsRef<Path>,
     {
         let (handler, rx) = create_watch(
             vertex.as_ref().to_path_buf(),
             fragment.as_ref().to_path_buf(),
+            frequency,
         )?;
         Ok(Watch {
             _handler: handler,
@@ -82,11 +85,12 @@ impl Drop for Handler {
 fn create_watch(
     vert_path: PathBuf,
     frag_path: PathBuf,
+    frequency: Duration
 ) -> Result<(Handler, mpsc::Receiver<Result<Message, Error>>), Error> {
     let (notify_tx, notify_rx) = mpsc::channel();
     let (thread_tx, thread_rx) = mpsc::channel();
     let mut watcher: RecommendedWatcher =
-        Watcher::new(notify_tx, Duration::from_millis(50)).map_err(Error::FileWatch)?;
+        Watcher::new(notify_tx, frequency).map_err(Error::FileWatch)?;
 
     let mut vp = vert_path.clone();
     let mut fp = frag_path.clone();

@@ -20,6 +20,7 @@ pub struct CompiledShaders {
     pub fragment: Vec<u32>,
 }
 
+/// Loads and compiles the vertex and fragment GLSL shaders from files
 pub fn load<T>(vertex: T, fragment: T) -> Result<CompiledShaders, Error>
 where
     T: AsRef<Path>,
@@ -29,6 +30,7 @@ where
     Ok(CompiledShaders{ vertex, fragment })
 }
 
+/// Parses the shaders and gives an entry point
 pub fn parse(code: &CompiledShaders) -> Result<Entry, Error> {
     reflection::create_entry(code)
 }
