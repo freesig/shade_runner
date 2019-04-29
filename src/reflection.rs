@@ -5,8 +5,10 @@ use crate::vk::descriptor::descriptor::*;
 use crate::vk::descriptor::pipeline_layout::PipelineLayoutDescPcRange;
 use crate::vk::pipeline::shader::ShaderInterfaceDefEntry;
 use crate::CompiledShaders;
+use crate::error::Error;
 use std::borrow::Cow;
 use std::collections::HashMap;
+use std::convert::TryFrom;
 
 pub struct ShaderInterfaces {
     pub inputs: Vec<ShaderInterfaceDefEntry>,
@@ -22,11 +24,11 @@ pub struct LayoutData {
     pub pc_ranges: Vec<PipelineLayoutDescPcRange>,
 }
 
-pub fn create_entry(shaders: &CompiledShaders) -> Entry {
+pub fn create_entry(shaders: &CompiledShaders) -> Result<Entry, Error> {
     let vertex_interfaces = create_interfaces(&shaders.vertex);
-    let vertex_layout = create_layouts(&shaders.vertex);
+    let vertex_layout = create_layouts(&shaders.vertex)?;
     let fragment_interfaces = create_interfaces(&shaders.fragment);
-    let fragment_layout = create_layouts(&shaders.fragment);
+    let fragment_layout = create_layouts(&shaders.fragment)?;
     let frag_input = FragInput {
         inputs: fragment_interfaces.inputs,
     };
@@ -53,14 +55,14 @@ pub fn create_entry(shaders: &CompiledShaders) -> Entry {
         },
         layout_data: vertex_layout,
     };
-    Entry {
+    Ok(Entry {
         frag_input,
         frag_output,
         vert_input,
         vert_output,
         frag_layout,
         vert_layout,
-    }
+    })
 }
 
 fn create_interfaces(data: &[u32]) -> ShaderInterfaces {
@@ -105,11 +107,12 @@ fn create_interfaces(data: &[u32]) -> ShaderInterfaces {
         .expect("failed to load module")
 }
 
-fn create_layouts(data: &[u32]) -> LayoutData {
+fn create_layouts(data: &[u32]) -> Result<LayoutData, Error> {
     sr::ShaderModule::load_u32_data(data)
         .map(|m| {
-            let (num_sets, num_bindings, descriptions) = m
-                .enumerate_descriptor_sets(None)
+            //let (num_sets, num_bindings, descriptions) = m
+            let descs = 
+                m.enumerate_descriptor_sets(None)
                 .map(|sets| {
                     let num_sets = sets.len();
                     let num_bindings = sets
@@ -130,7 +133,8 @@ fn create_layouts(data: &[u32]) -> LayoutData {
                                         descriptor_type: b.descriptor_type,
                                         image: b.image,
                                     };
-                                    let ty = SpirvTy::<DescriptorDescTy>::from(info).inner();
+                                    let ty = SpirvTy::<DescriptorDescTy>::try_from(info)?;
+                                    let ty = ty.inner();
                                     let stages = ShaderStages::none();
                                     let d = DescriptorDesc {
                                         ty,
@@ -140,17 +144,19 @@ fn create_layouts(data: &[u32]) -> LayoutData {
                                         // it's correct
                                         readonly: true,
                                     };
-                                    (b.binding as usize, d)
+                                    Ok((b.binding as usize, d))
                                 })
+                            .flat_map(|d| d.ok())
                                 .collect::<HashMap<usize, DescriptorDesc>>();
                             (i.set as usize, desc)
                         })
                         .collect::<HashMap<usize, HashMap<usize, DescriptorDesc>>>();
                     (num_sets, num_bindings, descriptions)
                 })
-                .expect("Failed to pass descriptors");
-            let (num_constants, pc_ranges) = m
-                .enumerate_push_constant_blocks(None)
+            .into_iter();
+            //let (num_constants, pc_ranges) = m
+            let pcs = 
+                m.enumerate_push_constant_blocks(None)
                 .map(|constants| {
                     let num_constants = constants.len();
                     let pc_ranges = constants
@@ -163,14 +169,14 @@ fn create_layouts(data: &[u32]) -> LayoutData {
                         .collect::<Vec<PipelineLayoutDescPcRange>>();
                     (num_constants, pc_ranges)
                 })
-                .expect("Failed to pass push constants");
+            .into_iter();
+            descs.flat_map(|(num_sets, num_bindings, descriptions)| pcs.map(|(num_constants, pc_ranges)|
             LayoutData {
                 num_sets,
                 num_bindings,
                 descriptions,
                 num_constants,
                 pc_ranges,
-            }
+            })).next()
         })
-        .expect("failed to load module")
 }

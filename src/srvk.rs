@@ -1,7 +1,9 @@
 use crate::sr; 
 use crate::vk;
+use crate::error::{ConvertError, Error};
 use vk::descriptor::descriptor::*;
 use vk::format::Format;
+use std::convert::TryFrom;
 
 pub struct SpirvTy<T> {
     inner: T,
@@ -12,34 +14,35 @@ pub struct DescriptorDescInfo {
     pub image: sr::types::ReflectImageTraits,
 }
 
+
 impl<T> SpirvTy<T> {
     pub fn inner(self) -> T {
         self.inner
     }
 }
 
-impl From<DescriptorDescInfo> for SpirvTy<DescriptorDescTy> {
-    fn from(d: DescriptorDescInfo) -> Self {
+impl TryFrom<DescriptorDescInfo> for SpirvTy<DescriptorDescTy> {
+    type Error = Error;
+    fn try_from(d: DescriptorDescInfo) -> Result<Self, Self::Error> {
         use sr::types::ReflectDescriptorType as SR;
         use DescriptorDescTy as VK;
-        let t = match d.descriptor_type {
-            SR::Undefined => unreachable!(),
-            SR::Sampler => VK::Sampler,
-            SR::CombinedImageSampler => VK::CombinedImageSampler(SpirvTy::from(d.image).inner()),
-            SR::SampledImage => unreachable!(),
-            SR::StorageImage => unreachable!(),
-            SR::UniformTexelBuffer => unreachable!(),
-            SR::StorageTexelBuffer => unreachable!(),
-            SR::UniformBuffer => unreachable!(),
-            SR::StorageBuffer => unreachable!(),
-            SR::UniformBufferDynamic => unreachable!(),
-            SR::StorageBufferDynamic => unreachable!(),
-            SR::InputAttachment => unreachable!(),
-            SR::AccelerationStructureNV => unreachable!(),
-        };
-        SpirvTy {
-            inner: t,
+        match d.descriptor_type {
+            SR::Undefined => Err(ConvertError::Unimplemented),
+            SR::Sampler => Ok(VK::Sampler),
+            SR::CombinedImageSampler => Ok(VK::CombinedImageSampler(SpirvTy::from(d.image).inner())),
+            SR::SampledImage => Err(ConvertError::Unimplemented),
+            SR::StorageImage => Err(ConvertError::Unimplemented),
+            SR::UniformTexelBuffer => Err(ConvertError::Unimplemented),
+            SR::StorageTexelBuffer => Err(ConvertError::Unimplemented),
+            SR::UniformBuffer => Err(ConvertError::Unimplemented),
+            SR::StorageBuffer => Err(ConvertError::Unimplemented),
+            SR::UniformBufferDynamic => Err(ConvertError::Unimplemented),
+            SR::StorageBufferDynamic => Err(ConvertError::Unimplemented),
+            SR::InputAttachment => Err(ConvertError::Unimplemented),
+            SR::AccelerationStructureNV => Err(ConvertError::Unimplemented),
         }
+        .map(|t| SpirvTy{ inner: t })
+        .map_err(|e| Error::Layout(e))
     }
 }
 
@@ -136,7 +139,7 @@ impl From<sr::types::ReflectFormat> for SpirvTy<Format> {
         use sr::types::ReflectFormat::*;
         use Format::*;
         let t = match f {
-            Undefined => unreachable!(),
+            Undefined => unimplemented!(),
             R32_UINT => R32Uint,
             R32_SINT => R32Sint,
             R32_SFLOAT => R32Sfloat,
