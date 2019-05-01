@@ -99,9 +99,11 @@ fn create_watch(
     watcher
         .watch(&vp, RecursiveMode::NonRecursive)
         .map_err(Error::FileWatch)?;
-    watcher
-        .watch(&fp, RecursiveMode::NonRecursive)
-        .map_err(Error::FileWatch)?;
+    if vp != fp {
+        watcher
+            .watch(&fp, RecursiveMode::NonRecursive)
+            .map_err(Error::FileWatch)?;
+    }
 
     let (loader, rx) = Loader::create(vert_path, frag_path);
 
