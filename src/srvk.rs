@@ -1,9 +1,9 @@
-use crate::sr; 
-use crate::vk;
 use crate::error::{ConvertError, Error};
+use crate::sr;
+use crate::vk;
+use std::convert::TryFrom;
 use vk::descriptor::descriptor::*;
 use vk::format::Format;
-use std::convert::TryFrom;
 
 pub struct SpirvTy<T> {
     inner: T,
@@ -13,7 +13,6 @@ pub struct DescriptorDescInfo {
     pub descriptor_type: sr::types::ReflectDescriptorType,
     pub image: sr::types::ReflectImageTraits,
 }
-
 
 impl<T> SpirvTy<T> {
     pub fn inner(self) -> T {
@@ -29,19 +28,27 @@ impl TryFrom<DescriptorDescInfo> for SpirvTy<DescriptorDescTy> {
         match d.descriptor_type {
             SR::Undefined => Err(ConvertError::Unimplemented),
             SR::Sampler => Ok(VK::Sampler),
-            SR::CombinedImageSampler => Ok(VK::CombinedImageSampler(SpirvTy::try_from(d.image)?.inner())),
-            SR::SampledImage => Err(ConvertError::Unimplemented),
+            SR::CombinedImageSampler => Ok(VK::CombinedImageSampler(
+                SpirvTy::try_from(d.image)?.inner(),
+            )),
+            SR::SampledImage => Ok(VK::Image(SpirvTy::try_from(d.image)?.inner())),
             SR::StorageImage => Err(ConvertError::Unimplemented),
-            SR::UniformTexelBuffer => Err(ConvertError::Unimplemented),
-            SR::StorageTexelBuffer => Err(ConvertError::Unimplemented),
-            SR::UniformBuffer => Err(ConvertError::Unimplemented),
-            SR::StorageBuffer => Err(ConvertError::Unimplemented),
-            SR::UniformBufferDynamic => Err(ConvertError::Unimplemented),
-            SR::StorageBufferDynamic => Err(ConvertError::Unimplemented),
-            SR::InputAttachment => Err(ConvertError::Unimplemented),
+            SR::UniformTexelBuffer => Ok(VK::TexelBuffer {
+                storage: false,
+                format: None,
+            }),
+            SR::StorageTexelBuffer => Ok(VK::TexelBuffer {
+                storage: false,
+                format: None,
+            }),
+            SR::UniformBuffer => Ok(VK::Buffer(DescriptorBufferDesc{ dynamic: Some(false), storage: false })),
+            SR::StorageBuffer => Ok(VK::Buffer(DescriptorBufferDesc{ dynamic: Some(false), storage: true })),
+            SR::UniformBufferDynamic => Ok(VK::Buffer(DescriptorBufferDesc{ dynamic: Some(true), storage: false })),
+            SR::StorageBufferDynamic => Ok(VK::Buffer(DescriptorBufferDesc{ dynamic: Some(true), storage: true })),
+            SR::InputAttachment => Ok(SpirvTy::try_from(d.image)?.inner()),
             SR::AccelerationStructureNV => Err(ConvertError::Unimplemented),
         }
-        .map(|t| SpirvTy{ inner: t })
+        .map(|t| SpirvTy { inner: t })
         .map_err(Error::Layout)
     }
 }
@@ -49,9 +56,11 @@ impl TryFrom<DescriptorDescInfo> for SpirvTy<DescriptorDescTy> {
 impl TryFrom<sr::types::ReflectImageTraits> for SpirvTy<DescriptorImageDesc> {
     type Error = Error;
     fn try_from(d: sr::types::ReflectImageTraits) -> Result<Self, Self::Error> {
-        let conv_array_layers = |a, d|{
+        let conv_array_layers = |a, d| {
             if a != 0 {
-                DescriptorImageDescArray::Arrayed{max_layers: Some(d)}
+                DescriptorImageDescArray::Arrayed {
+                    max_layers: Some(d),
+                }
             } else {
                 DescriptorImageDescArray::NonArrayed
             }
@@ -65,10 +74,29 @@ impl TryFrom<sr::types::ReflectImageTraits> for SpirvTy<DescriptorImageDesc> {
             multisampled: d.ms != 0,
             array_layers: conv_array_layers(d.arrayed, d.depth),
         };
-        Ok(SpirvTy{inner: t})
+        Ok(SpirvTy { inner: t })
     }
 }
 
+impl TryFrom<sr::types::ReflectImageTraits> for SpirvTy<DescriptorDescTy> {
+    type Error = Error;
+    fn try_from(d: sr::types::ReflectImageTraits) -> Result<Self, Self::Error> {
+        let conv_array_layers = |a, d| {
+            if a != 0 {
+                DescriptorImageDescArray::Arrayed {
+                    max_layers: Some(d),
+                }
+            } else {
+                DescriptorImageDescArray::NonArrayed
+            }
+        };
+        let t = DescriptorDescTy::InputAttachment {
+            multisampled: d.ms != 0,
+            array_layers: conv_array_layers(d.arrayed, d.depth),
+        };
+        Ok(SpirvTy { inner: t })
+    }
+}
 impl TryFrom<sr::types::variable::ReflectDimension> for SpirvTy<DescriptorImageDescDimensions> {
     type Error = Error;
     fn try_from(d: sr::types::variable::ReflectDimension) -> Result<Self, Self::Error> {
@@ -81,7 +109,7 @@ impl TryFrom<sr::types::variable::ReflectDimension> for SpirvTy<DescriptorImageD
             sr::types::variable::ReflectDimension::Cube => Ok(DescriptorImageDescDimensions::Cube),
             _ => Err(ConvertError::Unimplemented),
         }
-        .map(|t| SpirvTy{ inner: t })
+        .map(|t| SpirvTy { inner: t })
         .map_err(Error::Layout)
     }
 }
@@ -103,7 +131,7 @@ impl From<sr::types::image::ReflectImageFormat> for SpirvTy<Format> {
             R11G11B10_FLOAT => unimplemented!(),
             R16_FLOAT => R16Sfloat,
             RGBA16 => unimplemented!(),
-            RGB10A2 => unimplemented!(), 
+            RGB10A2 => unimplemented!(),
             RG16 => unimplemented!(),
             RG8 => unimplemented!(),
             R16 => unimplemented!(),
@@ -130,11 +158,11 @@ impl From<sr::types::image::ReflectImageFormat> for SpirvTy<Format> {
             RG32_UINT => R32G32Uint,
             RG16_UINT => R16G16Uint,
             RG8_UINT => R8G8Uint,
-            R16_UINT =>R16Uint,
-            R8_UINT =>R8Uint,
+            R16_UINT => R16Uint,
+            R8_UINT => R8Uint,
         };
-        SpirvTy{ inner };
-        // This function shouldn't be called yet because 
+        SpirvTy { inner };
+        // This function shouldn't be called yet because
         // it is not implemented correctly
         unreachable!()
     }
