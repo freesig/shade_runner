@@ -26,13 +26,13 @@ impl TryFrom<DescriptorDescInfo> for SpirvTy<DescriptorDescTy> {
         use sr::types::ReflectDescriptorType as SR;
         use DescriptorDescTy as VK;
         match d.descriptor_type {
-            SR::Undefined => Err(ConvertError::Unimplemented),
+            SR::Undefined => Err(ConvertError::Unimplemented(format!("{:?}", d.descriptor_type))),
             SR::Sampler => Ok(VK::Sampler),
             SR::CombinedImageSampler => Ok(VK::CombinedImageSampler(
                 SpirvTy::try_from(d.image)?.inner(),
             )),
             SR::SampledImage => Ok(VK::Image(SpirvTy::try_from(d.image)?.inner())),
-            SR::StorageImage => Err(ConvertError::Unimplemented),
+            SR::StorageImage => Err(ConvertError::Unimplemented(format!("{:?}", d.descriptor_type))),
             SR::UniformTexelBuffer => Ok(VK::TexelBuffer {
                 storage: false,
                 format: None,
@@ -46,7 +46,7 @@ impl TryFrom<DescriptorDescInfo> for SpirvTy<DescriptorDescTy> {
             SR::UniformBufferDynamic => Ok(VK::Buffer(DescriptorBufferDesc{ dynamic: Some(true), storage: false })),
             SR::StorageBufferDynamic => Ok(VK::Buffer(DescriptorBufferDesc{ dynamic: Some(true), storage: true })),
             SR::InputAttachment => Ok(SpirvTy::try_from(d.image)?.inner()),
-            SR::AccelerationStructureNV => Err(ConvertError::Unimplemented),
+            SR::AccelerationStructureNV=> Err(ConvertError::Unimplemented(format!("{:?}", d.descriptor_type))),
         }
         .map(|t| SpirvTy { inner: t })
         .map_err(Error::Layout)
@@ -107,7 +107,7 @@ impl TryFrom<sr::types::variable::ReflectDimension> for SpirvTy<DescriptorImageD
             Type2d => Ok(TwoDimensional),
             Type3d => Ok(ThreeDimensional),
             sr::types::variable::ReflectDimension::Cube => Ok(DescriptorImageDescDimensions::Cube),
-            _ => Err(ConvertError::Unimplemented),
+            _ => Err(ConvertError::Unimplemented(format!("{:?}", d))),
         }
         .map(|t| SpirvTy { inner: t })
         .map_err(Error::Layout)
@@ -174,7 +174,7 @@ impl TryFrom<sr::types::ReflectFormat> for SpirvTy<Format> {
         use sr::types::ReflectFormat::*;
         use Format::*;
         let t = match f {
-            Undefined => Err(Error::Layout(ConvertError::Unimplemented))?,
+            Undefined => Err(Error::Layout(ConvertError::Unimplemented(format!("{:?}", f))))?,
             R32_UINT => R32Uint,
             R32_SINT => R32Sint,
             R32_SFLOAT => R32Sfloat,

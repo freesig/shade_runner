@@ -8,7 +8,7 @@ pub enum Error {
 
 #[derive(Debug)]
 pub enum ConvertError {
-    Unimplemented,
+    Unimplemented(String),
 }
 
 #[derive(Debug)]
