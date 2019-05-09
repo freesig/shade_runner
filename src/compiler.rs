@@ -3,7 +3,7 @@ use shaderc::{IncludeType, ResolvedInclude};
 use shaderc::{ShaderKind, CompileOptions};
 use std::fs::File;
 use std::io::Read;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 pub fn compile<T>(path: T, shader_kind: ShaderKind) -> Result<Vec<u32>, CompileError>
 where
@@ -34,15 +34,20 @@ where
 fn get_include(
     path: &str,
     include_type: IncludeType,
-    _folder_path: &str,
-    _depth: usize,
+    folder_path: &str,
+    depth: usize,
 ) -> Result<ResolvedInclude, String> {
     match include_type {
         IncludeType::Relative => {
             let p = Path::new(path);
+            let mut folder = PathBuf::from(folder_path);
+            folder.pop();
+            folder.push(p);
+            let p = folder;
             if !p.is_file() {
                 return Err("Include doesn't point to file".to_string());
             }
+
             let resolved_name = p
                 .to_str()
                 .ok_or("Path has invalid characters".to_string())?
