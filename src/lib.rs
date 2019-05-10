@@ -1,5 +1,5 @@
 mod compiler;
-mod error;
+pub mod error;
 mod reflection;
 mod srvk;
 pub mod layouts;
@@ -8,7 +8,7 @@ mod watch;
 pub use layouts::*;
 pub use reflection::LayoutData;
 pub use watch::{Message, Watch};
-pub use error::{Error, ConvertError};
+pub use error::*;
 
 use spirv_reflect as sr;
 use vulkano as vk;
