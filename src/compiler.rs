@@ -35,7 +35,7 @@ fn get_include(
     path: &str,
     include_type: IncludeType,
     folder_path: &str,
-    depth: usize,
+    _depth: usize,
 ) -> Result<ResolvedInclude, String> {
     match include_type {
         IncludeType::Relative => {
