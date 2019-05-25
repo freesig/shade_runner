@@ -8,9 +8,8 @@ edition = "2018"
 notify = "4"
 shaderc = "0.5"
 spirv-reflect = "0.2"
-vulkano = { git = "https://github.com/mitchmindtree/vulkano", branch = "nannou_patches" }
+vulkano = "0.12"
 
 [dev-dependencies]
-vulkano = { git = "https://github.com/mitchmindtree/vulkano", branch = "nannou_patches" }
 color-backtrace = "0.1" 
 difference = "2"
