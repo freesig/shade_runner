@@ -81,6 +81,7 @@ where
 fn test_shade1() {
     setup();
     let target = Entry {
+        compute_layout: Default::default(),
         frag_input: FragInput { inputs: Vec::new() },
         frag_output: FragOutput {
             outputs: vec![ShaderInterfaceDefEntry {
@@ -90,10 +91,6 @@ fn test_shade1() {
             }],
         },
         frag_layout: FragLayout {
-            stages: ShaderStages {
-                fragment: true,
-                ..ShaderStages::none()
-            },
             layout_data: LayoutData {
                 num_sets: 0,
                 num_bindings: HashMap::new(),
@@ -113,10 +110,6 @@ fn test_shade1() {
             outputs: Vec::new(),
         },
         vert_layout: VertLayout {
-            stages: ShaderStages {
-                vertex: true,
-                ..ShaderStages::none()
-            },
             layout_data: LayoutData {
                 num_sets: 0,
                 num_bindings: HashMap::new(),
@@ -134,6 +127,7 @@ fn test_shade1() {
 fn test_shade2() {
     setup();
     let target = Entry {
+        compute_layout: Default::default(),
         frag_input: FragInput {
             inputs: vec![
                 ShaderInterfaceDefEntry {
@@ -161,10 +155,6 @@ fn test_shade2() {
             }],
         },
         frag_layout: FragLayout {
-            stages: ShaderStages {
-                fragment: true,
-                ..ShaderStages::none()
-            },
             layout_data: LayoutData {
                 num_sets: 0,
                 num_bindings: HashMap::new(),
@@ -200,10 +190,6 @@ fn test_shade2() {
             ],
         },
         vert_layout: VertLayout {
-            stages: ShaderStages {
-                vertex: true,
-                ..ShaderStages::none()
-            },
             layout_data: LayoutData {
                 num_sets: 0,
                 num_bindings: HashMap::new(),
@@ -221,6 +207,7 @@ fn test_shade2() {
 fn test_shade3() {
     setup();
     let target = Entry {
+        compute_layout: Default::default(),
         frag_input: FragInput { inputs: Vec::new() },
         frag_output: FragOutput {
             outputs: vec![ShaderInterfaceDefEntry {
@@ -230,10 +217,6 @@ fn test_shade3() {
             }],
         },
         frag_layout: FragLayout {
-            stages: ShaderStages {
-                fragment: true,
-                ..ShaderStages::none()
-            },
             layout_data: LayoutData {
                 num_sets: 1,
                 num_bindings: vec![(0, 1)].into_iter().collect(),
@@ -277,10 +260,6 @@ fn test_shade3() {
             outputs: Vec::new(),
         },
         vert_layout: VertLayout {
-            stages: ShaderStages {
-                vertex: true,
-                ..ShaderStages::none()
-            },
             layout_data: LayoutData {
                 num_sets: 0,
                 num_bindings: HashMap::new(),
@@ -309,6 +288,7 @@ fn test_shade3() {
 fn test_shade4() {
     setup();
     let target = Entry {
+        compute_layout: Default::default(),
         frag_input: FragInput { inputs: Vec::new() },
         frag_output: FragOutput {
             outputs: vec![ShaderInterfaceDefEntry {
@@ -318,10 +298,6 @@ fn test_shade4() {
             }],
         },
         frag_layout: FragLayout {
-            stages: ShaderStages {
-                fragment: true,
-                ..ShaderStages::none()
-            },
             layout_data: LayoutData {
                 num_sets: 0,
                 num_bindings: HashMap::new(),
@@ -348,10 +324,6 @@ fn test_shade4() {
             outputs: Vec::new(),
         },
         vert_layout: VertLayout {
-            stages: ShaderStages {
-                vertex: true,
-                ..ShaderStages::none()
-            },
             layout_data: LayoutData {
                 num_sets: 0,
                 num_bindings: HashMap::new(),

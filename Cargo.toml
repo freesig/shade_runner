@@ -1,6 +1,6 @@
 [package]
 name = "shade_runner"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Tom Gowan <tomrgowan@gmail.com>"]
 edition = "2018"
 description = "Allows runtime hot loading of shaders for vulkano"
@@ -9,7 +9,6 @@ repository = "https://github.com/freesig/shade_runner"
 readme = "README.md"
 license = "MIT"
 keywords = ["vulkan", "vulkano", "shaders", "hotloading"]
-license_file = "LICENSE"
 
 [dependencies]
 notify = "4"
