@@ -36,10 +36,6 @@ pub fn create_entry(shaders: &CompiledShaders) -> Result<Entry, Error> {
         outputs: fragment_interfaces.outputs,
     };
     let frag_layout = FragLayout {
-        stages: ShaderStages {
-            fragment: true,
-            ..ShaderStages::none()
-        },
         layout_data: fragment_layout,
     };
     let vert_input = VertInput {
@@ -49,10 +45,6 @@ pub fn create_entry(shaders: &CompiledShaders) -> Result<Entry, Error> {
         outputs: vertex_interfaces.outputs,
     };
     let vert_layout = VertLayout {
-        stages: ShaderStages {
-            vertex: true,
-            ..ShaderStages::none()
-        },
         layout_data: vertex_layout,
     };
     Ok(Entry {
@@ -62,6 +54,15 @@ pub fn create_entry(shaders: &CompiledShaders) -> Result<Entry, Error> {
         vert_output,
         frag_layout,
         vert_layout,
+        compute_layout: Default::default(),
+    })
+}
+
+pub fn create_compute_entry(shaders: &CompiledShaders) -> Result<Entry, Error> {
+    create_layouts(&shaders.compute).map(|layout_data| {
+        let mut entry = Entry::default();
+        entry.compute_layout = ComputeLayout{ layout_data };
+        entry
     })
 }
 
