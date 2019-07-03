@@ -14,7 +14,7 @@ keywords = ["vulkan", "vulkano", "shaders", "hotloading"]
 notify = "4"
 shaderc = "0.5"
 spirv-reflect = "0.2"
-vulkano = "0.12"
+vulkano = "0.13"
 
 [dev-dependencies]
 color-backtrace = "0.1" 
