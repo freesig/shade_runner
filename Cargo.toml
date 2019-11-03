@@ -1,6 +1,6 @@
 [package]
 name = "shade_runner"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Tom Gowan <tomrgowan@gmail.com>"]
 edition = "2018"
 description = "Allows runtime hot loading of shaders for vulkano"
@@ -14,7 +14,7 @@ keywords = ["vulkan", "vulkano", "shaders", "hotloading"]
 notify = "4"
 shaderc = "0.6"
 spirv-reflect = "0.2"
-vulkano = "0.14"
+vulkano = "0.16"
 
 [dev-dependencies]
 color-backtrace = "0.1" 
